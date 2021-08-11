@@ -1,3 +1,5 @@
+import javafx.util.Pair;
+
 import javax.swing.*;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
@@ -5,6 +7,7 @@ import javax.swing.text.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -20,13 +23,18 @@ public class GUI {
     private static JComponent valueDisplayChart;
     private static JButton sortButton;
     private static JLabel sortLabel;
-    private static Algorithms currentAlgo = Algorithms.BUBBLE;
+    private static Algorithms currentAlgo = Algorithms.MERGE;
 
     private static final int CHART_HEIGHT = 400;
     private static final int CHART_WIDTH = 600;
     private static final String MERGE_COMMAND = "Merge Sort";
     private static final String QUICK_COMMAND = "Quick Sort";
     private static final String BUBBLE_COMMAND = "Bubble Sort";
+
+    private static List<Integer> values;
+    private static Pair<Integer, Integer> pair;
+    private static boolean animating = false;
+    private static boolean swap = false;
 
 
     public static void main(String[] args) {
@@ -45,14 +53,15 @@ public class GUI {
         setupPanel.add(sliderValue, BorderLayout.CENTER);
         setupPanel.add(elementSlider, BorderLayout.WEST);
 
-        sorter = new Sorter(20);
+        sorter = new Sorter(10);
+        values = sorter.getNumberList();
 
 
         valueDisplayChart = new GComponent();
 
         sortButton = new JButton();
         sortLabel = new JLabel("Sort the graph!");
-        sortButton.addActionListener(new sortListener());
+        sortButton.addActionListener(new SortListener());
         sortButton.add(sortLabel);
 
 
@@ -68,7 +77,7 @@ public class GUI {
     }
 
     private static void generateSliderAndField() {
-        elementSlider = new JSlider(JSlider.HORIZONTAL, 0, 20, 5);
+        elementSlider = new JSlider(JSlider.HORIZONTAL, 0, 40, 10);
         elementSlider.addChangeListener(new sliderListener());
 
         sliderValue = new JTextField();
@@ -84,6 +93,7 @@ public class GUI {
         public void stateChanged(ChangeEvent e) {
             JSlider slider = (JSlider) e.getSource();
             sorter = new Sorter((int) slider.getValue());
+            values = sorter.getNumberList();
             frame.repaint();
 
             sliderValue.setText(String.valueOf(slider.getValue()));
@@ -92,11 +102,13 @@ public class GUI {
         }
     }
 
-    private static enum Algorithms {
+    private enum Algorithms {
         MERGE, QUICK, BUBBLE;
     }
 
     private static class GComponent extends JComponent {
+
+
 
         public GComponent() {
             setBorder(BorderFactory.createLineBorder(Color.BLACK));
@@ -110,23 +122,37 @@ public class GUI {
             return new Dimension(CHART_WIDTH, CHART_HEIGHT);
         }
 
+
+
         @Override
         protected void paintComponent(Graphics g) {
+
             super.paintComponent(g);
             g.setColor(Color.WHITE);
 
-            List<Integer> values = sorter.getNumberList();
+
             Integer biggest = Collections.max(values);
 
             int interval = CHART_WIDTH / values.size() + 1;
             int width = (int) Math.round((CHART_WIDTH / values.size()) - 10);
 
+            Color specialColor = (swap ? Color.RED : Color.GREEN);
+
             for (int i = 0; i < values.size(); i++) {
-                int height = (int) Math.round((CHART_HEIGHT - 20) * ((double) values.get(i) / biggest));
+                int currentValue = values.get(i);
+                int height = (int) Math.round((CHART_HEIGHT - 20) * ((double) currentValue / biggest));
+
+
 
                 g.setColor(Color.BLACK);
                 g.drawRect(interval * (i + 1), CHART_HEIGHT - height, width, height);
-                g.setColor(Color.BLUE);
+
+                if (animating && (currentValue == pair.getValue() || currentValue == pair.getKey())) {
+                    g.setColor(specialColor);
+                } else {
+                    g.setColor(Color.BLUE);
+                }
+
                 g.fillRect(interval * (i + 1), CHART_HEIGHT - height, width, height);
             }
         }
@@ -142,24 +168,72 @@ public class GUI {
                 int value = parseInt(field.getText());
                 elementSlider.setValue(value);
             }
-
-
         }
     }
 
-    private static class sortListener implements ActionListener {
+    private static class SortListener implements ActionListener {
+
+        Timer timer = new Timer((int) ((40 - values.size()) * 25), this);
+        List<Anim> animateList = new ArrayList<>();
+        List<Integer> preservedList;
+
+
+
+
         @Override
         public void actionPerformed(ActionEvent e) {
-            switch (currentAlgo) {
-                case BUBBLE:
+            if (e.getSource() instanceof javax.swing.Timer) {
+                if (animateList.size() <= 0) {
+                    timer.stop();
+                    animating = false;
+                    values = sorter.getNumberList();
+                    frame.repaint();
+                } else {
+                    animating = true;
+                    doRepaint(animateList.get(0));
+                    animateList.remove(0);
+                }
+            } else {
+                animateList.clear();
+                timer.setDelay((int) ((40 - values.size()) * 2.5));
+                preservedList = new ArrayList<>(sorter.getNumberList());
+
+
+                if (currentAlgo == Algorithms.BUBBLE) {
                     sorter.bubbleSort();
-                case QUICK:
+                } else if (currentAlgo == Algorithms.QUICK) {
                     sorter.quickSort();
-                case MERGE:
+                } else {
                     sorter.mergeSort();
+                }
+
+                //for some reason, once the algorithm finishes the values become the sorter's sorted list
+                //so running anim literally unsorts the list from being perfectly sorted
+                //am i going to fix this? no, i'll just preserve the initial list as a variable LOL
+                values = preservedList;
+                this.animateList = sorter.getAnimateList();
+                timer.start();
             }
-            frame.repaint();
         }
+
+        private void doRepaint(Anim anim) {
+            if (anim.hasCompare()) {
+                swap = false;
+                pair = anim.getCompare();
+                frame.repaint();
+                if (anim.hasSwap()) {
+                    swap = true;
+                    pair = anim.getSwap();
+                    frame.repaint();
+
+                    int i1 = values.indexOf(pair.getKey());
+                    int i2 = values.indexOf(pair.getValue());
+                    Collections.swap(values, i1, i2);
+                    frame.repaint();
+                }
+            }
+        }
+
     }
 
     private static class BoxListener implements ActionListener {
@@ -168,15 +242,13 @@ public class GUI {
             JComboBox<String> box = (JComboBox<String>) e.getSource();
             String value = (String) box.getSelectedItem();
 
-            switch (value) {
-                case MERGE_COMMAND:
-                    currentAlgo = Algorithms.MERGE;
-                case QUICK_COMMAND:
-                    currentAlgo = Algorithms.QUICK;
-                case BUBBLE_COMMAND:
-                    currentAlgo = Algorithms.BUBBLE;
+            if (value.equals(MERGE_COMMAND)) {
+                currentAlgo = Algorithms.MERGE;
+            } else if (value.equals(QUICK_COMMAND)) {
+                currentAlgo = Algorithms.QUICK;
+            } else {
+                currentAlgo = Algorithms.BUBBLE;
             }
-
         }
     }
 
@@ -203,7 +275,7 @@ public class GUI {
                 try {
                     int number = parseInt(str);
 
-                    if (number <= 20) {
+                    if (number <= 40) {
                         return true;
                     } else {
                         return false;
