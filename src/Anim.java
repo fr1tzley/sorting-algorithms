@@ -1,5 +1,6 @@
 import javafx.util.Pair;
 
+//anim class that can be given a pair of values which are compared, and a pair of values to swap
 public class Anim {
     private Pair<Integer, Integer> compare;
     private Pair<Integer, Integer> swap;

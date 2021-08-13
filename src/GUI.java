@@ -15,14 +15,9 @@ import static java.lang.Integer.parseInt;
 
 public class GUI {
     private static JFrame frame;
-    private static JPanel setupPanel;
-    private static JComboBox<String> algoBox;
     private static JSlider elementSlider;
     private static Sorter sorter;
     private static JTextField sliderValue;
-    private static JComponent valueDisplayChart;
-    private static JButton sortButton;
-    private static JLabel sortLabel;
     private static Algorithms currentAlgo = Algorithms.MERGE;
 
     private static final int CHART_HEIGHT = 400;
@@ -36,35 +31,40 @@ public class GUI {
     private static boolean animating = false;
     private static boolean swap = false;
 
-
+    //main method
     public static void main(String[] args) {
         frame = new JFrame("Sorting Algorithm Display Application");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setLayout(new BorderLayout());
 
+        //create selections for JComboBox and add action listener
         String[] algorithms = {"Merge Sort", "Quick Sort", "Bubble Sort"};
-        algoBox = new JComboBox<>(algorithms);
+        JComboBox<String> algoBox = new JComboBox<>(algorithms);
         algoBox.addActionListener(new BoxListener());
 
+        //method to generate JSlider and text field for changing number of items
         generateSliderAndField();
 
-        setupPanel = new JPanel(new BorderLayout());
+        //sets up central JPanel
+        JPanel setupPanel = new JPanel(new BorderLayout());
         setupPanel.add(algoBox, BorderLayout.EAST);
         setupPanel.add(sliderValue, BorderLayout.CENTER);
         setupPanel.add(elementSlider, BorderLayout.WEST);
 
+        //initializes sorter that will be used in application
         sorter = new Sorter(10);
         values = sorter.getNumberList();
 
+        //creates custom GComponent for graphed display of sorter's values
+        JComponent valueDisplayChart = new GComponent();
 
-        valueDisplayChart = new GComponent();
-
-        sortButton = new JButton();
-        sortLabel = new JLabel("Sort the graph!");
+        //buttons and labels
+        JButton sortButton = new JButton();
+        JLabel sortLabel = new JLabel("Sort the graph!");
         sortButton.addActionListener(new SortListener());
         sortButton.add(sortLabel);
 
-
+        //misc. frame setup
         frame.getContentPane().add(setupPanel, BorderLayout.NORTH);
         frame.getContentPane().add(valueDisplayChart, BorderLayout.CENTER);
         frame.getContentPane().add(sortButton, BorderLayout.SOUTH);
@@ -76,6 +76,8 @@ public class GUI {
         frame.repaint();
     }
 
+    //creates JSlider and JTextField, adding action listenrs to both and a DocumentFilter to the JTextField to ensure
+    //only numbers up to 40can be inputted
     private static void generateSliderAndField() {
         elementSlider = new JSlider(JSlider.HORIZONTAL, 0, 40, 10);
         elementSlider.addChangeListener(new sliderListener());
@@ -86,13 +88,13 @@ public class GUI {
         fieldText.setDocumentFilter(new IntDocFilter());
     }
 
-
+    //action listener for the JSlider, updates the Sorter whenever the slider's value is changed
     private static class sliderListener implements ChangeListener {
 
         @Override
         public void stateChanged(ChangeEvent e) {
             JSlider slider = (JSlider) e.getSource();
-            sorter = new Sorter((int) slider.getValue());
+            sorter = new Sorter(slider.getValue());
             values = sorter.getNumberList();
             frame.repaint();
 
@@ -102,13 +104,14 @@ public class GUI {
         }
     }
 
+    //enum of algorithms for use in application
     private enum Algorithms {
-        MERGE, QUICK, BUBBLE;
+        MERGE, QUICK, BUBBLE
     }
 
+    //create a basic GComponent class that whose PaintComponent method paints it with a bar graph of all
+    //the sorter's values
     private static class GComponent extends JComponent {
-
-
 
         public GComponent() {
             setBorder(BorderFactory.createLineBorder(Color.BLACK));
@@ -134,10 +137,11 @@ public class GUI {
             Integer biggest = Collections.max(values);
 
             int interval = CHART_WIDTH / values.size() + 1;
-            int width = (int) Math.round((CHART_WIDTH / values.size()) - 10);
+            int width = Math.round((CHART_WIDTH / values.size()) - 10);
 
             Color specialColor = (swap ? Color.RED : Color.GREEN);
-
+            //basic graph-making. bars are placed at fixed intervals, and their height is generated based on their size
+            //relative to the largest int in the list
             for (int i = 0; i < values.size(); i++) {
                 int currentValue = values.get(i);
                 int height = (int) Math.round((CHART_HEIGHT - 20) * ((double) currentValue / biggest));
@@ -158,9 +162,8 @@ public class GUI {
         }
     }
 
+    //action listener for text field
     private static class TextListener implements ActionListener {
-
-
         @Override
         public void actionPerformed(ActionEvent e) {
             JTextField field = (JTextField) e.getSource();
@@ -171,18 +174,23 @@ public class GUI {
         }
     }
 
+    //action listener to handle the sorting of the graph. handles both sorting and animating.
+    //listens for the sort button as well as events from a timer it creates after the sorting is complete
     private static class SortListener implements ActionListener {
-
-        Timer timer = new Timer((int) ((40 - values.size()) * 25), this);
+        //create a timer with a delay that decreases as the size of values grows
+        Timer timer = new Timer((40 - values.size()) * 15, this);
         List<Anim> animateList = new ArrayList<>();
         List<Integer> preservedList;
 
 
 
-
+        //handles events from sorting and timer. if the input comes from the sort button, the list will be sorted,
+        //and the sorter class will create a list of anims. After that, the timer's delay is updated and the list of
+        //anims is looped through at a rate of one anim per timer event until the sorting process is reproduced.
         @Override
         public void actionPerformed(ActionEvent e) {
             if (e.getSource() instanceof javax.swing.Timer) {
+                //stop timer once animatelist is fully looped through
                 if (animateList.size() <= 0) {
                     timer.stop();
                     animating = false;
@@ -216,6 +224,7 @@ public class GUI {
             }
         }
 
+        //repaints the GComponent according to the current anim
         private void doRepaint(Anim anim) {
             if (anim.hasCompare()) {
                 swap = false;
@@ -236,6 +245,7 @@ public class GUI {
 
     }
 
+    //sets the current algorithm according to input to the JComboBox
     private static class BoxListener implements ActionListener {
         @Override
         public void actionPerformed(ActionEvent e) {
@@ -252,6 +262,7 @@ public class GUI {
         }
     }
 
+    //document filter for JTextField
     private static class IntDocFilter extends DocumentFilter {
 
         @Override
@@ -263,11 +274,10 @@ public class GUI {
 
             if (test(sb.toString())) {
                 super.insertString(fb, offs, str, a);
-            } else {
-                // warn the user and don't allow the insert
             }
         }
 
+        //tests string to ensure it's either empty or a number between 1 and 40
         private boolean test(String str) {
             if (str.isEmpty()) {
                 return true;
@@ -275,11 +285,7 @@ public class GUI {
                 try {
                     int number = parseInt(str);
 
-                    if (number <= 40) {
-                        return true;
-                    } else {
-                        return false;
-                    }
+                    return number <= 40;
 
                 } catch (NumberFormatException nfe) {
                     return false;
@@ -298,12 +304,11 @@ public class GUI {
 
             if (test(sb.toString())) {
                 super.replace(fb, offs, length, text, a);
-            } else {
-                // warn the user and don't allow the insert
             }
 
         }
 
+        //filters out bad input
         @Override
         public void remove(FilterBypass fb, int offs, int length)
                 throws BadLocationException {
@@ -314,8 +319,6 @@ public class GUI {
 
             if (test(sb.toString())) {
                 super.remove(fb, offs, length);
-            } else {
-                // warn the user and don't allow the insert
             }
 
         }

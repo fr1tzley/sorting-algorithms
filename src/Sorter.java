@@ -19,6 +19,7 @@ public class Sorter {
         animateList = new ArrayList<>();
     }
 
+    //make a list of n length randomly populated with items up to n in size
     private List<Integer> makeList(Integer elementCount) {
         List<Integer> numberList = new ArrayList<>();
         Random rand = new Random();
@@ -39,9 +40,10 @@ public class Sorter {
         boolean solved = false;
         animateList.clear();
 
-
+        //loop through list while it's unsolved
         while (!solved) {
             noUnmatchedPairs = true;
+            //compares each item in list with all others
             for (int i = 0; i < numberList.size() - 1; i++) {
                 Anim anim = new Anim();
                 Integer int1 = numberList.get(i);
@@ -49,6 +51,7 @@ public class Sorter {
                 anim.setCompare(int1, int2);
 
                 if (int1 > int2) {
+                    //if any item is larger than an item after it, set the variable to false so the sorting continues
                     noUnmatchedPairs = false;
                     anim.setSwap(int1, int2);
                     Collections.swap(numberList, i, i + 1);
@@ -69,16 +72,22 @@ public class Sorter {
        System.out.println(numberList);
     }
 
+
+
     private List<Integer> quickSortRecursion(List<Integer> numberList) {
 
         if (numberList.size() <= 1) {
+            //base case
             return numberList;
         } else {
+            //pick item in middle of list and remove from list
             Integer pivot = numberList.get((numberList.size() / 2) - 1);
             numberList.remove((numberList.size() / 2) - 1);
+
             List<Integer> lesserList = new ArrayList<>();
             List<Integer> greaterList = new ArrayList<>();
 
+            //populate lesser and greater list with values lesser and greater than pivot
             for (Integer i : numberList) {
                 if (i > pivot) {
                     greaterList.add(i);
@@ -87,9 +96,12 @@ public class Sorter {
                 }
             }
 
+            //sort recursively
             List<Integer> sortedLesser = quickSortRecursion(lesserList);
             List<Integer> sortedGreater = quickSortRecursion(greaterList);
 
+
+            //merge lists
             sortedLesser.add(pivot);
 
             for (Integer i : sortedGreater) {
@@ -101,123 +113,66 @@ public class Sorter {
 
     public void mergeSort() {
         animateList.clear();
-        List<Integer> mainList = new ArrayList<>(numberList);
-        List<Integer> workList = new ArrayList<>(numberList);
-        mergeSortSingleList(mainList, 0, numberList.size() - 1, workList);
+        numberList = mergeSortRecursion(numberList);
         System.out.println(numberList);
     }
 
+    private List<Integer> mergeSortRecursion(List<Integer> numberList) {
+        if (numberList.size() <= 1) {
+            //base case
+            return numberList;
+        } else {
 
+            List<Integer> left = new ArrayList<>();
+            List<Integer> right = new ArrayList<>();
 
-    private void mergeSortSingleList(List<Integer> mainList, int start, int end, List<Integer> workList) {
-        if (end - start <= 1) {
-            return;
-        }
-
-        int mid = (start + end) / 2;
-
-        mergeSortSingleList(mainList, start, mid, workList);
-        mergeSortSingleList(mainList, mid, end, workList);
-
-        mergeSortMerge(workList, start, mid, end, mainList);
-    }
-
-    private void mergeSortMerge(List<Integer> mainList, int start, int mid, int end, List<Integer> workList) {
-        int i = start;
-        int j = mid;
-
-        for (int k = start; k < end; k++) {
-            Anim anim = new Anim();
-            anim.setCompare(mainList.get(k), mainList.get(j));
-            if (i < mid && (j >= end || mainList.get(i) <= mainList.get(j))) {
-                workList.set(k, mainList.get(i));
-                i++;
-            } else {
-                workList.set(k, mainList.get(j));
-                anim.setSwap(workList.get(k), mainList.get(j));
-                j++;
+            //add left half of list to left list
+            for (int i = 0; i <= (numberList.size() / 2) - 1; i++) {
+                left.add(numberList.get(i));
             }
-            System.out.println(workList);
-            animateList.add(anim);
+
+            //add right half to right list
+            for (int i = numberList.size() / 2; i <= numberList.size() - 1; i++ ) {
+                right.add(numberList.get(i));
+            }
+
+            //sort sublists recursively
+            List<Integer> sortedLeft = mergeSortRecursion(left);
+            List<Integer> sortedRight = mergeSortRecursion(right);
+
+            //merge parallel lists
+            List<Integer> completeList = mergeLists(sortedLeft, sortedRight);
+
+            return completeList;
         }
     }
 
+    private List<Integer> mergeLists(List<Integer> left, List<Integer> right) {
+        List<Integer> result = new ArrayList<>();
+        while (!left.isEmpty() || !right.isEmpty()) {
+            if (!left.isEmpty() && !right.isEmpty()) {
+                //add items from left and right in order of smallness
+                if (right.get(0) > left.get(0)) {
+                    result.add(left.get(0));
+                    left.remove(0);
+                } else {
+                    result.add(right.get(0));
+                    right.remove(0);
+                }
+                //if one array is empty, add the rest of the other
+            } else if (!right.isEmpty()) {
+                result.add(right.get(0));
+                right.remove(0);
+            } else {
+                result.add(left.get(0));
+                left.remove(0);
+            }
 
-//    private List<Integer> mergeSortRecursion(List<Integer> numberList) {
-//        if (numberList.size() <= 1) {
-//            return numberList;
-//        } else {
-//
-//            List<Integer> left = new ArrayList<>();
-//            List<Integer> right = new ArrayList<>();
-//
-//            for (int i = 0; i <= (numberList.size() / 2) - 1; i++) {
-//                left.add(numberList.get(i));
-//            }
-//
-//            for (int i = numberList.size() / 2; i <= numberList.size() - 1; i++ ) {
-//                right.add(numberList.get(i));
-//            }
-//
-//            List<Integer> sortedLeft = mergeSortRecursion(left);
-//            List<Integer> sortedRight = mergeSortRecursion(right);
-//
-//            List<Integer> completeList = mergeLists(sortedLeft, sortedRight);
-//
-//            return completeList;
-//        }
-//    }
-//
-//    private List<Integer> mergeLists(List<Integer> left, List<Integer> right) {
-//        List<Integer> result = new ArrayList<>();
-//        while (!left.isEmpty() || !right.isEmpty()) {
-//            if (!left.isEmpty() && !right.isEmpty()) {
-//                Anim anim = new Anim();
-//                anim.setCompare(right.get(0), left.get(0));
-//                anim.setSwap(right.get(0), left.get(0));
-//                if (right.get(0) > left.get(0)) {
-//                    result.add(left.get(0));
-//                    left.remove(0);
-//                } else {
-//                    result.add(right.get(0));
-//                    right.remove(0);
-//                }
-//                animateList.add(anim);
-//            } else if (!right.isEmpty()) {
-//                result.add(right.get(0));
-//                right.remove(0);
-//            } else {
-//                result.add(left.get(0));
-//                left.remove(0);
-//            }
-//
-//        }
-//        return result;
-//    }
+        }
+        return result;
+    }
 
-//    private void addToAnimate(List<Integer> result) {
-//
-//        int start = numberList.size();
-//        int end = -1;
-//        for (int i = 0; i < numberList.size() ; i++) {
-//            if (result.contains(numberList.get(i))) {
-//                start = min(start, i);
-//                end = max(end, i);
-//            }
-//        }
-//
-//        List<Integer> listToAnimate = new ArrayList<>();
-//        for (int i : animateList.get(animateList.size() - 1)) {
-//            listToAnimate.add(i);
-//        }
-//
-//        for (int i = 0 ; i <= end - start ; i++) {
-//            int resultChoice = i - start;
-//            listToAnimate.set(resultChoice, result.get(i));
-//        }
-//        animateList.add(listToAnimate);
-//    }
-
+    //getters
     public List<Integer> getNumberList() {
         return numberList;
     }
